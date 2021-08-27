@@ -8,28 +8,28 @@ from calibration import Calibration
 from sensor_msgs.msg import Image
 from xycar_msgs.msg import xycar_motor
 
-class StopLineCountNoneZero():
+class StopLineCountNoneZero(Calibration):
     def __init__(self):
         # self.image = np.empty(shape=[0])
         self.image = None
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/usb_cam/image_raw", Image, self.img_callback)
-        self.width = 640
-        self.height = 480
-        self.state = False
+        # self.width = 640
+        # self.height = 480
+        self.stop = False
 
-        self.mtx = np.array([[422.037858, 0.0, 245.895397], [0.0, 435.589734, 163.625535], [0.0, 0.0, 1.0]])
-        self.dist = np.array([-0.289296, 0.061035, 0.001786, 0.015238, 0.0])
-        self.cal_mtx, self.cal_roi = cv2.getOptimalNewCameraMatrix(self.mtx, self.dist, (self.width, self.height), 1, (self.width, self.height))
+        # self.mtx = np.array([[422.037858, 0.0, 245.895397], [0.0, 435.589734, 163.625535], [0.0, 0.0, 1.0]])
+        # self.dist = np.array([-0.289296, 0.061035, 0.001786, 0.015238, 0.0])
+        # self.cal_mtx, self.cal_roi = cv2.getOptimalNewCameraMatrix(self.mtx, self.dist, (self.width, self.height), 1, (self.width, self.height))
 
     def img_callback(self, img):
         self.image = self.bridge.imgmsg_to_cv2(img, "bgr8")
 
-    def calibrate_image(self, frame, mtx, dist, cal_mtx, cal_roi):
-        tf_image = cv2.undistort(frame, mtx, dist, None, cal_mtx)
-        x, y, w, h = cal_roi
-        tf_image = tf_image[y:y+h, x:x+w]
-        return cv2.resize(tf_image, (frame.shape[1], frame.shape[0]))
+    # def calibrate_image(self, frame, mtx, dist, cal_mtx, cal_roi):
+    #     tf_image = cv2.undistort(frame, mtx, dist, None, cal_mtx)
+    #     x, y, w, h = cal_roi
+    #     tf_image = tf_image[y:y+h, x:x+w]
+    #     return cv2.resize(tf_image, (frame.shape[1], frame.shape[0]))
 
     def detect_stopline(self, high_threshold_value):
         img = self.image
@@ -42,10 +42,10 @@ class StopLineCountNoneZero():
         cv2.imshow('image_processing', image)
         if cv2.countNonZero(image) > 1000:
             print("stopline")
-            self.state = True
+            self.stop = True
         else:
             print("go")
-            self.state = False
+            self.stop = False
 
     def set_roi(self, img):
         return img[370:395, 160:480]
@@ -75,7 +75,7 @@ while not rospy.is_shutdown():
     stopline.detect_stopline(5)
     # cv2.imshow("image", image)
     
-    if stopline.state == True:
+    if stopline.stop == True:
         motor_msg.speed = 0
     else:
         motor_msg.speed = 10
